@@ -4,7 +4,7 @@ from lightwood.encoders.image.nn import NnAutoEncoder
 from lightwood.encoders.numeric.numeric import NumericEncoder
 from lightwood.encoders.text.infersent import InferSentEncoder
 from lightwood.encoders.text.rnn import RnnEncoder
-from lightwood.encoders.time_series.cesium_ts import CesiumTsEncoder
+#from lightwood.encoders.time_series.cesium_ts import CesiumTsEncoder
 from lightwood.encoders.categorical.onehot import OneHotEncoder
 from lightwood.encoders.categorical.autoencoder import CategoricalAutoEncoder
 
@@ -23,7 +23,8 @@ class Text:
     RnnEncoder = RnnEncoder
 
 class TimeSeries:
-    CesiumTsEncoder = CesiumTsEncoder
+    pass
+    #CesiumTsEncoder = CesiumTsEncoder
 
 class Categorical:
     OneHotEncoder = OneHotEncoder

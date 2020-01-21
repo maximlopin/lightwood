@@ -29,7 +29,7 @@ MODULES = [
 def run_tests(modules):
     '''
     Run modules as scripts to execute main function
-    '''    
+    '''
     for module in modules:
         runpy.run_path(module, run_name='__main__')
 
