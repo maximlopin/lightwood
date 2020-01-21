@@ -15,9 +15,10 @@ from lightwood.data_schemas.predictor_config import predictor_config_schema
 from lightwood.config.config import CONFIG
 from lightwood.mixers.sk_learn.sk_learn import SkLearnMixer
 from lightwood.mixers.nn.nn import NnMixer
-from lightwood.mixers.boost.boost import BoostMixer
 from sklearn.metrics import accuracy_score, r2_score
 from lightwood.constants.lightwood import COLUMN_DATA_TYPES
+if CONFIG.HELPER_MIXERS:
+    from lightwood.mixers.boost.boost import BoostMixer
 
 
 class Predictor:
