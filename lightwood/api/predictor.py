@@ -280,7 +280,8 @@ class Predictor:
         for subset_iteration in [1,2]:
             if stop_training:
                 break
-            subset_id_arr =  [*from_data_ds.subsets.keys()] # [1]
+            subset_id_arr = [*from_data_ds.subsets.keys()]
+            #subset_id_arr = [1]
             for subset_id in subset_id_arr:
                 started_subset = time.time()
                 if stop_training:
@@ -303,7 +304,7 @@ class Predictor:
                 #iterate over the iter_fit and see what the epoch and mixer error is
                 for epoch, training_error in enumerate(mixer.iter_fit(subset_train_ds, initialize=first_run)):
                     first_run = False
-                    logging.info('Lightwood training, iteration {iter_i}, training error {error}'.format(iter_i=epoch, error=training_error))
+                    #logging.info('Lightwood training, iteration {iter_i}, training error {error}'.format(iter_i=epoch, error=training_error))
 
                     # Once the training error is getting smaller, enable dropout to teach the network to predict without certain features
                     if subset_iteration == 2 and training_error < 0.5 and not from_data_ds.enable_dropout:
@@ -384,8 +385,8 @@ class Predictor:
                             stop_training = True
 
                         # If the trauining subset is overfitting on it's associated testing subset
-                        if (subset_delta_mean <= 0 and len(subset_test_error_delta_buff) > 4) or (time.time() - started_subset) > stop_training_after_seconds/len(from_data_ds.subsets.keys()):
-                            logging.info('Finished fitting on {subset_id} of {no_subsets} subset'.format(subset_id=subset_id, no_subsets=len(from_data_ds.subsets.keys())))
+                        if (subset_delta_mean <= 0 and len(subset_test_error_delta_buff) > 4) or (time.time() - started_subset) > stop_training_after_seconds/len(subset_id_arr):
+                            logging.info('Finished fitting on {subset_id} of {no_subsets} subset'.format(subset_id=subset_id, no_subsets=len(subset_id_arr)))
 
                             if mixer.is_selfaware:
                                 if best_selfaware_model is not None:
