@@ -112,4 +112,5 @@ class OneCycleLR:
 
         self.optimizer.param_groups[0]['lr'] = lr
         if momentum:
-            self.optimizer.param_groups[0]['betas'] = (momentum, self.optimizer.param_groups[1]['betas'])
+            print(self.optimizer.param_groups[0]['betas'])
+            self.optimizer.param_groups[0]['betas'] = (momentum, self.optimizer.param_groups[0]['betas'][1])
