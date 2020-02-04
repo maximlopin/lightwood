@@ -11,6 +11,7 @@ import operator
 from lightwood.mixers.helpers.default_net import DefaultNet
 from lightwood.mixers.helpers.transformer import Transformer
 from lightwood.mixers.helpers.ranger import Ranger
+from lightwood.mixers.helpers.on_cycle_scheduler import OneCycleLR
 from lightwood.config.config import CONFIG
 from lightwood.api.data_source import SubSet
 
@@ -21,6 +22,7 @@ class NnMixer:
         self.is_categorical_output = is_categorical_output
         self.net = None
         self.optimizer = None
+        self.scheduler = None
         self.input_column_names = None
         self.output_column_names = None
         self.transformer = None
@@ -69,7 +71,6 @@ class NnMixer:
         awareness_arr = []
         for i, data in enumerate(data_loader, 0):
             inputs, _ = data
-            inputs = inputs.to(self.net.device)
 
             with torch.no_grad():
                 if self.is_selfaware:
@@ -150,7 +151,6 @@ class NnMixer:
 
         for i, data in enumerate(data_loader, 0):
             inputs, labels = data
-            inputs = inputs.to(self.net.device)
             labels = labels.to(self.net.device)
 
             if self.is_categorical_output:
@@ -254,6 +254,7 @@ class NnMixer:
                     self.optimizer_args[optimizer_arg_name] = self.dynamic_parameters[optimizer_arg_name]
 
             self.optimizer = self.optimizer_class(self.net.parameters(), **self.optimizer_args)
+            self.scheduler = OneCycleLR(self.optimizer, num_steps=20)
         total_epochs = self.epochs
 
         if self._nonpersistent['sampler'] is None:
@@ -269,36 +270,39 @@ class NnMixer:
                 if self.start_selfaware_training and not self.is_selfaware:
                     logging.info('Making network selfaware !')
                     self.is_selfaware = True
-                    self.net = self.nn_class(ds, self.dynamic_parameters, selfaware=True, pretrained_net=self.net.net)
-                    self.last_unaware_net = copy.deepcopy(self.net.net)
+                    self.net = self.nn_class(ds, self.dynamic_parameters, selfaware=True, pretrained_net=(self.net.net, self.net.embedding_networks))
+
+                    self.last_unaware_net = copy.deepcopy(self.net.net).to('cpu')
+                    self.last_unaware_embedding_networks = copy.deepcopy(self.net.embedding_networks).to('cpu')
 
                     # Lower the learning rate once we start training the selfaware network
-                    self.optimizer_args['lr'] = self.optimizer.lr/8
+                    # self.optimizer_args['lr'] = self.optimizer.lr/8
                     gc.collect()
                     if 'cuda' in str(self.net.device):
                         torch.cuda.empty_cache()
                     self.optimizer.zero_grad()
                     self.optimizer = self.optimizer_class(self.net.parameters(), **self.optimizer_args)
+                    self.scheduler = None
 
                 if self.stop_selfaware_training and self.is_selfaware:
                     logging.info('Cannot train selfaware network, training a normal network instead !')
                     self.is_selfaware = False
-                    self.net = self.nn_class(ds, self.dynamic_parameters, selfaware=False, pretrained_net=self.last_unaware_net) #, pretrained_net=copy.deepcopy(self.net.net)
+                    self.net = self.nn_class(ds, self.dynamic_parameters, selfaware=False, pretrained_net=(self.last_unaware_net,self.last_unaware_embedding_networks)) #, pretrained_net=copy.deepcopy(self.net.net)
 
                     # Increase the learning rate closer to the previous levels
-                    self.optimizer_args['lr'] = self.optimizer.lr * 4
+                    # self.optimizer_args['lr'] = self.optimizer.lr * 4
                     gc.collect()
                     if 'cuda' in str(self.net.device):
                         torch.cuda.empty_cache()
                     self.optimizer.zero_grad()
                     self.optimizer = self.optimizer_class(self.net.parameters(), **self.optimizer_args)
+                    self.scheduler = None
 
                 total_iterations += 1
                 # get the inputs; data is a list of [inputs, labels]
                 inputs, labels = data
 
                 labels = labels.to(self.net.device)
-                inputs = inputs.to(self.net.device)
 
                 # zero the parameter gradients
                 self.optimizer.zero_grad()
@@ -334,6 +338,7 @@ class NnMixer:
 
                 total_loss.backward()
                 self.optimizer.step()
+                self.scheduler.setp()
                 # now that we have run backward in both losses, optimize() (review: we may need to optimize for each step)
 
                 error = running_loss / (i + 1)

@@ -6,7 +6,7 @@ class Transformer:
 
         self.input_features = input_features
         self.output_features = output_features
-        
+
         self.feature_len_map = {}
 
 
@@ -16,10 +16,8 @@ class Transformer:
         output_vector = []
 
         for input_feature in self.input_features:
-            sub_vector = sample['input_features'][input_feature].tolist()
-            input_vector += sub_vector
-            if input_feature not in self.feature_len_map:
-                self.feature_len_map[input_feature] = len(sub_vector)
+            sub_vector = sample['input_features'][input_feature]
+            input_vector.append(sub_vector)
 
         for output_feature in self.output_features:
             sub_vector = sample['output_features'][output_feature].tolist()
@@ -27,7 +25,7 @@ class Transformer:
             if output_feature not in self.feature_len_map:
                 self.feature_len_map[output_feature] = len(sub_vector)
 
-        return torch.FloatTensor(input_vector), torch.FloatTensor(output_vector)
+        return input_vector, torch.FloatTensor(output_vector)
 
     def revert(self, vector, feature_set = 'output_features'):
 
