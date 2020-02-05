@@ -259,8 +259,8 @@ class NnMixer:
             #    if optimizer_arg_name in self.dynamic_parameters:
             #        self.optimizer_args[optimizer_arg_name] = self.dynamic_parameters[optimizer_arg_name]
 
-            self.optimizer_args['lr'] = self.min_lr
-            self.optimizer_args['momentum'] = self.max_momentum
+            self.optimizer_args['lr'] = 0.0005 #self.min_lr
+            self.optimizer_args['momentum'] = 0.95 #self.max_momentum
 
             self.optimizer = self.optimizer_class(self.net.parameters(), **self.optimizer_args)
             self.scheduler = torch.optim.lr_scheduler.CyclicLR(self.optimizer, base_lr=self.min_lr, max_lr=self.max_lr,base_momentum=self.min_momentum,max_momentum=self.max_momentum, step_size_up=int(len(ds)*3/self.batch_size))
@@ -346,7 +346,7 @@ class NnMixer:
 
                 total_loss.backward()
                 self.optimizer.step()
-                self.scheduler.step()
+                #self.scheduler.step()
 
                 # now that we have run backward in both losses, optimize() (review: we may need to optimize for each step)
 

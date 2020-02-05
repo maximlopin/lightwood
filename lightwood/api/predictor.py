@@ -37,6 +37,7 @@ class Predictor:
             logging.info(f'Boosting mixer can\'t be loaded due to error: {e} !')
             print((f'Boosting mixer can\'t be loaded due to error: {e} !'))
 
+
         if load_from_path is not None:
             pickle_in = open(load_from_path, "rb")
             self_dict = dill.load(pickle_in)
@@ -317,9 +318,9 @@ class Predictor:
                         logging.info('Lightwood training, iteration {iter_i}, training error {error}'.format(iter_i=epoch, error=training_error))
 
                     # Once the training error is getting smaller, enable dropout to teach the network to predict without certain features
-                    if subset_iteration >= 2 and training_error < 0.5 and not from_data_ds.enable_dropout:
+                    if subset_iteration >= 2 and training_error < 0.3 and not from_data_ds.enable_dropout:
                         logging.info('Enabled dropout !')
-                        eval_every_x_epochs = max(1,int(eval_every_x_epochs/4))
+                        eval_every_x_epochs = max(1,int(eval_every_x_epochs/3))
                         eval_next_on_epoch = epoch
                         from_data_ds.enable_dropout = True
                         lowest_error = None

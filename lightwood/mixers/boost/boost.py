@@ -30,7 +30,7 @@ class BoostMixer():
         X = np.array(X)
         for target_col_name in self.targets:
             Y = data_source.get_column_original_data(target_col_name)
-
+            print(x for x in Y if x != '1')
             if self.targets[target_col_name]['type'] == COLUMN_DATA_TYPES.CATEGORICAL:
                 weight_map = self.targets[target_col_name]['weights']
                 if weight_map is None:
@@ -40,6 +40,7 @@ class BoostMixer():
                     for val in Y:
                         sample_weight.append(weight_map[val])
 
+                print([x for x in sample_weight if x > 0.0001872308556450104])
                 self.targets[target_col_name]['model'] = xgb.XGBClassifier()
                 self.targets[target_col_name]['model'].fit(X,Y,sample_weight=sample_weight)
 
