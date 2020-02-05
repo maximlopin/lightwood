@@ -56,6 +56,7 @@ class DefaultNet(torch.nn.Module):
 
             self.input_size = 0
 
+            '''
             network_feature_size = max([len(x) for x in input_sample])
             if len(input_sample) * network_feature_size > 3 * pow(10,4):
                 network_feature_size = int(3 * pow(10,4)/len(input_sample))
@@ -71,11 +72,12 @@ class DefaultNet(torch.nn.Module):
                 self.embedding_networks.append(torch.nn.Sequential(*layers))
 
                 self.input_size += network_feature_size
+                '''
 
-            self.embedding_networks = torch.nn.ModuleList(self.embedding_networks)
+            #self.embedding_networks = torch.nn.ModuleList(self.embedding_networks)
 
             self.output_size = len(output_sample)
-
+            self.input_size = len(input_sample)
             '''
             small_input = True if self.input_size < 50 else False
             small_output = True if self.input_size < 50 else False
@@ -106,13 +108,14 @@ class DefaultNet(torch.nn.Module):
             nr_data_points = len(ds)
 
             # Minimum size of the middle layer should be 1/4th of all the datapoints in the dataset
-            min_middle_layer = int(nr_data_points/(2*(self.input_size + self.output_size)))
+            min_middle_layer = min(800, int(nr_data_points/(2*(self.input_size + self.output_size))))
 
             shape = [self.input_size, max(min_middle_layer, int( np.mean([int(self.input_size),int(self.output_size)]) )), self.output_size]
 
         if pretrained_net is None:
             logging.info(f'Building network of shape: {shape}')
-
+            linear_function = PLinear  if CONFIG.USE_PROBABILISTIC_LINEAR else torch.nn.Linear
+            
             layers = []
             for ind in range(len(shape) - 1):
                 layers.append(linear_function(shape[ind],shape[ind+1]))
@@ -158,15 +161,15 @@ class DefaultNet(torch.nn.Module):
             for layer in self.net:
                 reset_layer_params(layer)
 
-        for i in range(len(self.embedding_networks)):
-            self.embedding_networks[i] = self.embedding_networks[i].to(self.device)
+        #for i in range(len(self.embedding_networks)):
+        #    self.embedding_networks[i] = self.embedding_networks[i].to(self.device)
 
         self.net = self.net.to(self.device)
 
         if self.available_devices > 1:
             self._foward_net = torch.nn.DataParallel(self.net)
-            for i in range(len(self.embedding_networks)):
-                self.embedding_networks[i] = torch.nn.DataParallel(self.embedding_networks[i])
+            #for i in range(len(self.embedding_networks)):
+            #    self.embedding_networks[i] = torch.nn.DataParallel(self.embedding_networks[i])
         else:
             self._foward_net = self.net
 
@@ -212,6 +215,7 @@ class DefaultNet(torch.nn.Module):
         :return: either just output or (output, awareness)
         """
 
+        '''
         embedded_input = []
 
         for index, input_feature in enumerate(input):
@@ -221,11 +225,13 @@ class DefaultNet(torch.nn.Module):
             #embedded_input.append(embedded_input_feature)
 
         embedded_input = torch.cat(embedded_input,1)
+        '''
+        input = input.to(self.device)
 
-        output = self._foward_net(embedded_input)
+        output = self._foward_net(input)
 
         if self.selfaware:
-            interim = torch.cat((embedded_input, output), 1)
+            interim = torch.cat((input, output), 1)
             awareness = self._foward_awareness_net(interim)
 
             return output, awareness

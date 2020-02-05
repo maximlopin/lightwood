@@ -280,17 +280,18 @@ class Predictor:
         first_run = True
         stop_training = False
 
-        for subset_iteration in [1,2]:
+        iterations = [1,2]
+        for subset_iteration in iterations:
+
             if stop_training:
                 break
-            subset_id_arr =  [*from_data_ds.subsets.keys()] # [1]
+
+            subset_id_arr =  [*from_data_ds.subsets.keys()]
+
             for subset_id in subset_id_arr:
                 started_subset = time.time()
                 if stop_training:
                     break
-
-                #subset_train_ds = from_data_ds #.subsets[subset_id]
-                #subset_test_ds = test_data_ds #.subsets[subset_id]
 
                 subset_train_ds = from_data_ds.subsets[subset_id]
                 subset_test_ds = test_data_ds.subsets[subset_id]
@@ -303,6 +304,9 @@ class Predictor:
                 best_model = None
                 best_selfaware_model = None
 
+                if subset_iteration >= 3:
+                    eval_next_on_epoch = eval_every_x_epochs = max(1,int(eval_every_x_epochs/4))
+
                 #iterate over the iter_fit and see what the epoch and mixer error is
                 for epoch, training_error in enumerate(mixer.iter_fit(subset_train_ds, initialize=first_run)):
                     first_run = False
@@ -313,9 +317,10 @@ class Predictor:
                         logging.info('Lightwood training, iteration {iter_i}, training error {error}'.format(iter_i=epoch, error=training_error))
 
                     # Once the training error is getting smaller, enable dropout to teach the network to predict without certain features
-                    if subset_iteration == 2 and training_error < 0.5 and not from_data_ds.enable_dropout:
+                    if subset_iteration >= 2 and training_error < 0.5 and not from_data_ds.enable_dropout:
                         logging.info('Enabled dropout !')
-                        eval_every_x_epochs = max(1,int(eval_every_x_epochs/6))
+                        eval_every_x_epochs = max(1,int(eval_every_x_epochs/4))
+                        eval_next_on_epoch = epoch
                         from_data_ds.enable_dropout = True
                         lowest_error = None
                         last_test_error = None
@@ -325,7 +330,7 @@ class Predictor:
                         continue
 
                     # If the selfaware network isn't able to train, go back to the original network
-                    if subset_iteration == 2 and (np.isnan(training_error) or np.isinf(training_error) or training_error > pow(10,5)):
+                    if subset_iteration >= 2 and (np.isnan(training_error) or np.isinf(training_error) or training_error > pow(10,5)):
                         mixer.start_selfaware_training = False
                         mixer.stop_selfaware_training = True
                         lowest_error = None
@@ -337,8 +342,7 @@ class Predictor:
 
                     # Once we are past the priming/warmup period, start training the selfaware network
                     if training_error < 0.15:
-                        eval_every_x_epochs = max(1,int(eval_every_x_epochs/2))
-                        if subset_iteration == 2 and not mixer.is_selfaware and CONFIG.SELFAWARE and not mixer.stop_selfaware_training:
+                        if subset_iteration >= 2 and not mixer.is_selfaware and CONFIG.SELFAWARE and not mixer.stop_selfaware_training:
                             logging.info('Started selfaware training !')
                             mixer.start_selfaware_training = True
                             lowest_error = None
@@ -404,7 +408,7 @@ class Predictor:
                                 mixer.update_model(best_model)
 
 
-                            if subset_id == subset_id_arr[-1]:
+                            if subset_id == subset_id_arr[-1] and subset_iteration == iterations[-1]:
                                 stop_training = True
                             elif not stop_training:
                                 break

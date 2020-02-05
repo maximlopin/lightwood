@@ -57,6 +57,7 @@ class DataSource(Dataset):
         self.dropout_dict = {}
         self.enable_dropout = False
         self.disable_cache = not CONFIG.CACHE_ENCODED_DATA
+        self.disable_encoded_cache = True
         self.subsets = {}
 
         for col in self.configuration['input_features']:
@@ -89,6 +90,7 @@ class DataSource(Dataset):
 
         for subset_nr in subsets_indexes:
             self.subsets[subset_nr] = SubSet(self, subsets_indexes[subset_nr])
+        #self.subsets[subset_nr + 1] = self
 
     def _clear_cache(self):
         self.list_cache = {}
@@ -128,7 +130,7 @@ class DataSource(Dataset):
 
         dropout_features = None
 
-        if self.training == True and random.randint(0,3) == 1 and self.enable_dropout and CONFIG.ENABLE_DROPOUT:
+        if self.training == True and self.enable_dropout and random.randint(0,3) == 1 and CONFIG.ENABLE_DROPOUT:
             dropout_features = [feature['name'] for feature in self.configuration['input_features'] if random.random() > (1 - self.dropout_dict[feature['name']])]
 
             # Make sure we never drop all the features, since this would make the row meaningless
@@ -150,7 +152,7 @@ class DataSource(Dataset):
                 col_name = feature['name']
                 col_config = self.get_column_config(col_name)
                 if col_name not in self.encoded_cache: # if data is not encoded yet, encode values
-                    if not ((dropout_features is not None and  col_name in dropout_features) or self.disable_cache):
+                    if not ((dropout_features is not None and  col_name in dropout_features) or self.disable_cache or self.disable_encoded_cache):
                         self.get_encoded_column_data(col_name)
 
 
@@ -161,7 +163,7 @@ class DataSource(Dataset):
                     if 'depends_on_column' in col_config:
                         custom_data[custom_data['depends_on_column']] = [None]
                     sample[feature_set][col_name] = self.get_encoded_column_data(col_name, custom_data=custom_data)[0]
-                elif self.disable_cache:
+                elif self.disable_cache or self.disable_encoded_cache:
                     if col_name in self.data_frame:
                         custom_data = {col_name: [self.data_frame[col_name].iloc[idx]]}
                     else:
@@ -199,7 +201,7 @@ class DataSource(Dataset):
         if self.transformer:
             sample = self.transformer.transform(sample)
 
-        if not self.disable_cache:
+        if not self.disable_cache and (dropout_features is None or len(dropout_features) < 1):
             self.transformed_cache[idx] = sample
             return self.transformed_cache[idx]
         else:
@@ -321,7 +323,7 @@ class DataSource(Dataset):
             encoded_vals = self.encoders[column_name].encode(*args)
             # Cache the encoded data so we don't have to run the encoding,
             # Don't cache custom_data (custom_data is usually used when running without cache or dropping out a feature for a certain pass)
-            if column_name not in self.encoded_cache and custom_data is None:
+            if column_name not in self.encoded_cache and custom_data is None and not self.disable_encoded_cache:
                 self.encoded_cache[column_name] = encoded_vals
             return encoded_vals
         else:

@@ -42,11 +42,11 @@ class NnMixer:
         self.is_selfaware = False
         self.last_unaware_net = False
 
-        self.max_lr = 0.01
-        self.min_lr = 0.001
+        self.max_lr = 0.05
+        self.min_lr = 0.005
 
-        self.max_momentum = 0.96
-        self.min_momentum = 0.89
+        self.max_momentum = 0.95
+        self.min_momentum = 0.9
 
 
         self._nonpersistent = {
@@ -137,7 +137,7 @@ class NnMixer:
             return -1
 
     def error(self, ds):
-        """
+        """'lr
         :param ds:
         :return:
         """
@@ -283,7 +283,7 @@ class NnMixer:
                     self.net = self.nn_class(ds, self.dynamic_parameters, selfaware=True, pretrained_net=(self.net.net, self.net.embedding_networks))
 
                     self.last_unaware_net = copy.deepcopy(self.net.net).to('cpu')
-                    self.last_unaware_embedding_networks = copy.deepcopy(self.net.embedding_networks).to('cpu')
+                    self.last_unaware_embedding_networks = copy.deepcopy(self.net.embedding_networks)#.to('cpu')
 
                     gc.collect()
                     if 'cuda' in str(self.net.device):
