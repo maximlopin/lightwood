@@ -1,9 +1,11 @@
 import logging
+
+import torch
+import numpy as np
+
 from lightwood.config.config import CONFIG
 from lightwood.mixers.helpers.shapes import *
 from lightwood.mixers.helpers.plinear import PLinear
-import torch
-
 
 
 class DefaultNet(torch.nn.Module):
@@ -59,8 +61,9 @@ class DefaultNet(torch.nn.Module):
                 network_feature_size = int(3 * pow(10,4)/len(input_sample))
 
             for input_feature_sample in input_sample:
+                self.input_size += len(input_feature_sample)
+                continue
                 input_feature_len = len(input_feature_sample)
-                print(input_feature_len)
                 layers = []
                 layers.append(linear_function(input_feature_len,network_feature_size))
                 layers.append(rectifier())
@@ -99,7 +102,13 @@ class DefaultNet(torch.nn.Module):
             else:
                 shape = funnel(self.input_size,self.output_size,depth)
             '''
-            shape = [self.input_size, max([self.input_size*2,self.output_size*2,400]), self.output_size]
+
+            nr_data_points = len(ds)
+
+            # Minimum size of the middle layer should be 1/4th of all the datapoints in the dataset
+            min_middle_layer = int(nr_data_points/(2*(self.input_size + self.output_size)))
+
+            shape = [self.input_size, max(min_middle_layer, int( np.mean([int(self.input_size),int(self.output_size)]) )), self.output_size]
 
         if pretrained_net is None:
             logging.info(f'Building network of shape: {shape}')
@@ -168,6 +177,7 @@ class DefaultNet(torch.nn.Module):
             else:
                 self._foward_awareness_net = self.awareness_net
 
+
     def calculate_overall_certainty(self):
         """
         Calculate overall certainty of the model
@@ -206,9 +216,9 @@ class DefaultNet(torch.nn.Module):
 
         for index, input_feature in enumerate(input):
             input_feature = input_feature.to(self.device)
-
-            embedded_input_feature = self.embedding_networks[index](input_feature)
-            embedded_input.append(embedded_input_feature)
+            embedded_input.append(input_feature)
+            #embedded_input_feature = self.embedding_networks[index](input_feature)
+            #embedded_input.append(embedded_input_feature)
 
         embedded_input = torch.cat(embedded_input,1)
 
@@ -221,3 +231,8 @@ class DefaultNet(torch.nn.Module):
             return output, awareness
 
         return output
+
+
+    def grow(self):
+        for param in self.net.parameters():
+            pass

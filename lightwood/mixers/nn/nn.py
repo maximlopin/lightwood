@@ -11,7 +11,6 @@ import operator
 from lightwood.mixers.helpers.default_net import DefaultNet
 from lightwood.mixers.helpers.transformer import Transformer
 from lightwood.mixers.helpers.ranger import Ranger
-from lightwood.mixers.helpers.on_cycle_scheduler import OneCycleLR
 from lightwood.config.config import CONFIG
 from lightwood.api.data_source import SubSet
 
@@ -42,6 +41,13 @@ class NnMixer:
         self.stop_selfaware_training = False
         self.is_selfaware = False
         self.last_unaware_net = False
+
+        self.max_lr = 0.01
+        self.min_lr = 0.001
+
+        self.max_momentum = 0.96
+        self.min_momentum = 0.89
+
 
         self._nonpersistent = {
             'sampler': None
@@ -246,15 +252,18 @@ class NnMixer:
             if self.optimizer_args is None:
                 self.optimizer_args = {}
 
-            if 'beta1' in self.dynamic_parameters:
-                self.optimizer_args['betas'] = (self.dynamic_parameters['beta1'],0.999)
+            #if 'beta1' in self.dynamic_parameters:
+            #    self.optimizer_args['betas'] = (self.dynamic_parameters['beta1'])
 
-            for optimizer_arg_name in ['lr','k','N_sma_threshold']:
-                if optimizer_arg_name in self.dynamic_parameters:
-                    self.optimizer_args[optimizer_arg_name] = self.dynamic_parameters[optimizer_arg_name]
+            #for optimizer_arg_name in ['lr','k','N_sma_threshold']:
+            #    if optimizer_arg_name in self.dynamic_parameters:
+            #        self.optimizer_args[optimizer_arg_name] = self.dynamic_parameters[optimizer_arg_name]
+
+            self.optimizer_args['lr'] = self.min_lr
+            self.optimizer_args['momentum'] = self.max_momentum
 
             self.optimizer = self.optimizer_class(self.net.parameters(), **self.optimizer_args)
-            self.scheduler = OneCycleLR(self.optimizer, num_steps=20)
+            self.scheduler = torch.optim.lr_scheduler.CyclicLR(self.optimizer, base_lr=self.min_lr, max_lr=self.max_lr,base_momentum=self.min_momentum,max_momentum=self.max_momentum, step_size_up=int(len(ds)*3/self.batch_size))
         total_epochs = self.epochs
 
         if self._nonpersistent['sampler'] is None:
@@ -263,6 +272,7 @@ class NnMixer:
             data_loader = DataLoader(ds, batch_size=self.batch_size, num_workers=0, sampler=self._nonpersistent['sampler'])
 
         total_iterations = 0
+
         for epoch in range(total_epochs):  # loop over the dataset multiple times
             running_loss = 0.0
             error = 0
@@ -275,14 +285,12 @@ class NnMixer:
                     self.last_unaware_net = copy.deepcopy(self.net.net).to('cpu')
                     self.last_unaware_embedding_networks = copy.deepcopy(self.net.embedding_networks).to('cpu')
 
-                    # Lower the learning rate once we start training the selfaware network
-                    # self.optimizer_args['lr'] = self.optimizer.lr/8
                     gc.collect()
                     if 'cuda' in str(self.net.device):
                         torch.cuda.empty_cache()
                     self.optimizer.zero_grad()
                     self.optimizer = self.optimizer_class(self.net.parameters(), **self.optimizer_args)
-                    self.scheduler = None
+                    self.scheduler = torch.optim.lr_scheduler.CyclicLR(self.optimizer, base_lr=self.min_lr/8, max_lr=self.max_lr/8,base_momentum=self.min_momentum,max_momentum=self.max_momentum, step_size_up=int(len(ds)*3/self.batch_size))
 
                 if self.stop_selfaware_training and self.is_selfaware:
                     logging.info('Cannot train selfaware network, training a normal network instead !')
@@ -296,7 +304,7 @@ class NnMixer:
                         torch.cuda.empty_cache()
                     self.optimizer.zero_grad()
                     self.optimizer = self.optimizer_class(self.net.parameters(), **self.optimizer_args)
-                    self.scheduler = None
+                    self.scheduler = torch.optim.lr_scheduler.CyclicLR(self.optimizer, base_lr=self.min_lr, max_lr=self.max_lr,base_momentum=self.min_momentum,max_momentum=self.max_momentum, step_size_up=int(len(ds)*3/self.batch_size))
 
                 total_iterations += 1
                 # get the inputs; data is a list of [inputs, labels]
@@ -338,7 +346,8 @@ class NnMixer:
 
                 total_loss.backward()
                 self.optimizer.step()
-                self.scheduler.setp()
+                self.scheduler.step()
+
                 # now that we have run backward in both losses, optimize() (review: we may need to optimize for each step)
 
                 error = running_loss / (i + 1)

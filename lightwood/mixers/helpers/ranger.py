@@ -6,7 +6,7 @@ from torch.optim.optimizer import Optimizer
 
 
 class Ranger(Optimizer):
-    def __init__(self, params, lr=0.001, alpha=0.5, k=6, N_sma_threshold=5, betas=(.95,0.999), eps=1e-5, weight_decay=0):
+    def __init__(self, params, lr=0.001, alpha=0.5, k=6, N_sma_threshold=5, momentum=.95, beta2 = 0.999, eps=1e-5, weight_decay=0):
         #parameter checks
         if not 0.0 <= alpha <= 1.0:
             raise ValueError(f'Invalid slow update rate: {alpha}')
@@ -24,7 +24,7 @@ class Ranger(Optimizer):
         # @TODO Implement the above testing with AX ^
 
         #prep defaults and init torch.optim base
-        defaults = dict(lr=lr, alpha=alpha, k=k, betas=betas, N_sma_threshold=N_sma_threshold, eps=eps, weight_decay=weight_decay)
+        defaults = dict(lr=lr, alpha=alpha, k=k, momentum=momentum, beta2=beta2, N_sma_threshold=N_sma_threshold, eps=eps, weight_decay=weight_decay)
         super().__init__(params,defaults)
 
         # Since we keep LR the same for all param groups, store it here for now for quick&easy access if we want to know it
@@ -80,7 +80,8 @@ class Ranger(Optimizer):
 
                 #begin computations
                 exp_avg, exp_avg_sq = state['exp_avg'], state['exp_avg_sq']
-                beta1, beta2 = group['betas']
+                beta1 = group['momentum']
+                beta2 = group['beta2']
 
                 #compute variance mov avg
                 exp_avg_sq.mul_(beta2).addcmul_(1 - beta2, grad, grad)

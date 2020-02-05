@@ -36,7 +36,7 @@ class OneCycleLR:
     def __init__(self,
                  optimizer: Optimizer,
                  num_steps: int,
-                 lr_range: tuple = (0.005, 0.5),
+                 lr_range: tuple = (0.001, 0.25),
                  momentum_range: tuple = (0.85, 0.95),
                  annihilation_frac: float = 0.1,
                  reduce_factor: float = 0.01,
@@ -112,5 +112,7 @@ class OneCycleLR:
 
         self.optimizer.param_groups[0]['lr'] = lr
         if momentum:
-            print(self.optimizer.param_groups[0]['betas'])
             self.optimizer.param_groups[0]['betas'] = (momentum, self.optimizer.param_groups[0]['betas'][1])
+
+        #print(self.optimizer.param_groups[0]['lr'])
+        #print(self.optimizer.param_groups[0]['betas'])

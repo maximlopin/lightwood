@@ -235,7 +235,7 @@ class Predictor:
         test_data_ds.output_weights = from_data_ds.output_weights
         test_data_ds.create_subsets(nr_subsets)
 
-        if 'optimizer' in self.config:
+        if 'optimizer' in self.config and False:
             optimizer = self.config['optimizer']()
 
             while True:
@@ -308,13 +308,14 @@ class Predictor:
                     first_run = False
 
                     # Log this every now and then so that the user knows it's running
-                    if (int(time.time()) - log_reasure) > 30:
+                    if (int(time.time()) - log_reasure) > 10:
                         log_reasure = time.time()
                         logging.info('Lightwood training, iteration {iter_i}, training error {error}'.format(iter_i=epoch, error=training_error))
 
                     # Once the training error is getting smaller, enable dropout to teach the network to predict without certain features
                     if subset_iteration == 2 and training_error < 0.5 and not from_data_ds.enable_dropout:
                         logging.info('Enabled dropout !')
+                        eval_every_x_epochs = max(1,int(eval_every_x_epochs/6))
                         from_data_ds.enable_dropout = True
                         lowest_error = None
                         last_test_error = None
@@ -335,15 +336,17 @@ class Predictor:
                         continue
 
                     # Once we are past the priming/warmup period, start training the selfaware network
-                    if subset_iteration == 2 and not mixer.is_selfaware and CONFIG.SELFAWARE and not mixer.stop_selfaware_training and training_error < 0.2:
-                        logging.info('Started selfaware training !')
-                        mixer.start_selfaware_training = True
-                        lowest_error = None
-                        last_test_error = None
-                        last_subset_test_error = None
-                        test_error_delta_buff = []
-                        subset_test_error_delta_buff = []
-                        continue
+                    if training_error < 0.15:
+                        eval_every_x_epochs = max(1,int(eval_every_x_epochs/2))
+                        if subset_iteration == 2 and not mixer.is_selfaware and CONFIG.SELFAWARE and not mixer.stop_selfaware_training:
+                            logging.info('Started selfaware training !')
+                            mixer.start_selfaware_training = True
+                            lowest_error = None
+                            last_test_error = None
+                            last_subset_test_error = None
+                            test_error_delta_buff = []
+                            subset_test_error_delta_buff = []
+                            continue
 
                     if epoch >= eval_next_on_epoch:
                         # Prime the model on each subset for a bit
