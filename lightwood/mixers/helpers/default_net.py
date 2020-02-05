@@ -48,11 +48,11 @@ class DefaultNet(torch.nn.Module):
         super(DefaultNet, self).__init__()
 
 
+        rectifier = torch.nn.SELU  #alternative: torch.nn.ReLU
+        linear_function = PLinear  if CONFIG.USE_PROBABILISTIC_LINEAR else torch.nn.Linear
+
         if shape is None and pretrained_net is None:
             input_sample, output_sample = ds[0]
-
-            rectifier = torch.nn.SELU  #alternative: torch.nn.ReLU
-            linear_function = PLinear  if CONFIG.USE_PROBABILISTIC_LINEAR else torch.nn.Linear
 
             self.input_size = 0
 
@@ -114,8 +114,7 @@ class DefaultNet(torch.nn.Module):
 
         if pretrained_net is None:
             logging.info(f'Building network of shape: {shape}')
-            linear_function = PLinear  if CONFIG.USE_PROBABILISTIC_LINEAR else torch.nn.Linear
-            
+
             layers = []
             for ind in range(len(shape) - 1):
                 layers.append(linear_function(shape[ind],shape[ind+1]))
