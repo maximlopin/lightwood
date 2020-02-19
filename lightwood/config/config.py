@@ -18,7 +18,7 @@ class CONFIG:
     ENABLE_DROPOUT = True
 
     """Probabilistic FC layers"""
-    USE_PROBABILISTIC_LINEAR = False # change weights in mixer to be probabilistic
+    USE_PROBABILISTIC_LINEAR = True # change weights in mixer to be probabilistic
 
     """Encoder options"""
     TRAIN_TO_PREDICT_TARGET = True
@@ -29,6 +29,6 @@ class CONFIG:
 
     MONITORING = {
         'epoch_loss': True
-        ,'batch_loss': True
+        ,'batch_loss': False
         ,'network_heatmap': False
     }

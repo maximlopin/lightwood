@@ -185,7 +185,7 @@ class NnMixer:
                     outputs, awareness = self.net(inputs)
                     loss = self.criterion(outputs, labels)
 
-                    awareness_loss = self.awareness_criterion(awareness, torch.FloatTensor(loss.item()).to(self.net.device))
+                    awareness_loss = self.awareness_criterion(awareness, torch.FloatTensor([loss.item()]).to(self.net.device)).item()
 
                     if running_awareness_loss is None:
                         running_awareness_loss = 0
