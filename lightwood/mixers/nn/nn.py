@@ -163,7 +163,10 @@ class NnMixer:
             data_loader = DataLoader(ds, batch_size=self.batch_size, shuffle=True, num_workers=0)
 
         running_loss = 0.0
-        error = 0
+        error = None
+
+        running_awareness_loss = None
+        awareness_error = None
 
         for i, data in enumerate(data_loader, 0):
             inputs, labels = data
@@ -176,19 +179,33 @@ class NnMixer:
                 targets_c = torch.LongTensor(target_indexes)
                 labels = targets_c.to(self.net.device)
 
+
             with torch.no_grad():
                 if self.is_selfaware:
                     outputs, awareness = self.net(inputs)
+                    loss = self.criterion(outputs, labels)
+
+                    awareness_loss = self.awareness_criterion(awareness, torch.FloatTensor(loss.item()).to(self.net.device))
+
+                    if running_awareness_loss is None:
+                        running_awareness_loss = 0
+                    running_awareness_loss += awareness_loss
+
                 else:
                     outputs = self.net(inputs)
+                    loss = self.criterion(outputs, labels)
 
-            loss = self.criterion(outputs, labels)
             running_loss += loss.item()
             error = running_loss / (i + 1)
+            if running_awareness_loss is not None:
+                awareness_error = running_awareness_loss/(i+1)
 
         if CONFIG.MONITORING['epoch_loss']:
             self.monitor.plot_loss(error, self.total_iterations, 'Test Epoch Error')
             self.monitor.plot_loss(error, self.total_iterations, f'Test Epoch Error - Subset {subset_id}')
+            if running_awareness_loss is not None:
+                self.monitor.plot_loss(awareness_error, self.total_iterations, 'Test Epoch Awareness Error')
+                self.monitor.plot_loss(awareness_error, self.total_iterations, f'Test Epoch Awareness Error - Subset {subset_id}')
 
         self.net = self.net.train()
 
@@ -343,12 +360,9 @@ class NnMixer:
                     loss = self.criterion(outputs, labels)
 
                 if self.is_selfaware:
-                    real_loss = torch.abs(labels - outputs) # error precentual to the target
-                    real_loss = torch.Tensor(real_loss.tolist()) # disconnect from the graph (test if this is necessary)
-                    real_loss = real_loss.to(self.net.device)
 
-                    awareness_loss = self.awareness_criterion(awareness, real_loss)
-                    total_loss = self.loss_combination_operator(awareness_loss, loss)
+                    awareness_loss = self.awareness_criterion(awareness, torch.FloatTensor([loss.item()]).to(self.net.device))
+                    total_loss = self.loss_combination_operator(awareness_loss, loss.item())
 
                     if CONFIG.MONITORING['batch_loss']:
                         self.monitor.plot_loss(awareness_loss.item(), self.total_iterations, 'Awreness Batch Loss')

@@ -103,7 +103,7 @@ class DefaultNet(torch.nn.Module):
                     self.output_size = layer.out_features
 
         if self.selfaware:
-            awareness_net_shape = funnel(self.input_size + self.output_size, self.output_size, 4)
+            awareness_net_shape = funnel(self.input_size + self.output_size, 1, 3)
             awareness_layers = []
 
             for ind in range(len(awareness_net_shape) - 1):
