@@ -8,6 +8,7 @@ import numpy as np
 import gc
 import operator
 
+from lightwood.mixers.helpers.quantile_loss import QuantileLoss
 from lightwood.mixers.helpers.default_net import DefaultNet
 from lightwood.mixers.helpers.transformer import Transformer
 from lightwood.mixers.helpers.ranger import Ranger
@@ -26,6 +27,7 @@ class NnMixer:
         self.optimizer_class = None
         self.optimizer_args = None
         self.criterion = None
+        self.confidence_criterion = None
 
         self.batch_size = 200
         self.epochs = 120000
@@ -264,6 +266,7 @@ class NnMixer:
                     self.criterion = torch.nn.CrossEntropyLoss(weight=output_weights)
                 else:
                     self.criterion = torch.nn.MSELoss()
+                    self.confidence_criterion = QuantileLoss()
 
             self.optimizer_class = Ranger
             if self.optimizer_args is None:
@@ -340,7 +343,8 @@ class NnMixer:
                     cat_labels = targets_c.to(self.net.device)
                     loss = self.criterion(outputs, cat_labels)
                 else:
-                    loss = self.criterion(outputs, labels)
+                    loss = self.criterion(outputs[:,0:3], labels)
+                    confidence_loss = self.confidence_criterion(outputs, labels)
 
                 if self.is_selfaware:
                     real_loss = torch.abs(labels - outputs) # error precentual to the target
