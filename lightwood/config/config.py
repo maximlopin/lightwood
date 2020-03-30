@@ -8,7 +8,7 @@ class CONFIG:
         USE_CUDA = True
 
     USE_DEVICE = None
-    CACHE_ENCODED_DATA = True
+    CACHE_ENCODED_DATA = False
 
     # Enable deterministic cuda flag and use seeds everywhere (static or based on features of the dataset)
     DETERMINISTIC = True
@@ -21,7 +21,7 @@ class CONFIG:
     USE_PROBABILISTIC_LINEAR = False # change weights in mixer to be probabilistic
 
     """Encoder options"""
-    TRAIN_TO_PREDICT_TARGET = True
+    TRAIN_TO_PREDICT_TARGET = False
     MAX_ENCODER_TRAINING_TIME = 3600 * 2
 
     MONITORING = {

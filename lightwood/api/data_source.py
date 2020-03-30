@@ -26,6 +26,9 @@ class SubSet(Dataset):
     def get_feature_names(self, where='input_features'):
         return self.data_source.get_feature_names(where)
 
+    def train_encoders(self, cost):
+        return self.data_source.train_encoders(cost)
+
     def __getattribute__(self, name):
         if name in ['configuration', 'encoders', 'transformer', 'training',
                     'output_weights', 'dropout_dict', 'disable_cache', 'out_types', 'out_indexes']:
@@ -62,6 +65,8 @@ class DataSource(Dataset):
         self.subsets = {}
         self.out_indexes = None
         self.out_types = None
+        self.input_names_orderd = None
+        self.input_indexes = None
 
         for col in self.configuration['input_features']:
             if len(self.configuration['input_features']) > 1:
@@ -199,6 +204,8 @@ class DataSource(Dataset):
             sample = self.transformer.transform(sample)
             if self.out_indexes is None:
                 self.out_indexes = self.transformer.out_indexes
+                self.input_indexes = self.transformer.input_indexes
+                self.input_names_orderd = self.transformer.input_features
 
         if not self.disable_cache:
             self.transformed_cache[idx] = sample
@@ -359,6 +366,18 @@ class DataSource(Dataset):
                 if feature['name'] == column_name:
                     return feature
 
+    def train_encoders(self, cost):
+        for i in range(len(self.input_indexes)):
+            enc = self.encoders[self.input_names_orderd[i]]
+            try:
+                if enc.trainable is True:
+                    print(cost.shape)
+                    enc.backprop(cost[self.input_indexes[i][0]:self.input_indexes[i][1]])
+            except Exception as e:
+                print(e)
+                pass
+
+        return
 
 if __name__ == "__main__":
     #TODO; sometimes this fail depending on the data generated

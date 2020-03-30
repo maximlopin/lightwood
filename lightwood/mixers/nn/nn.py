@@ -30,7 +30,7 @@ class NnMixer:
         self.criterion_arr = None
         self.unreduced_criterion_arr = None
 
-        self.batch_size = 200
+        self.batch_size = 20
         self.epochs = 120000
 
         self.nn_class = DefaultNet
@@ -389,6 +389,8 @@ class NnMixer:
                 labels = labels.to(self.net.device)
                 inputs = inputs.to(self.net.device)
 
+                inputs.requires_grad = True
+
                 # zero the parameter gradients
                 self.optimizer.zero_grad()
 
@@ -433,13 +435,14 @@ class NnMixer:
                 if CONFIG.MONITORING['batch_loss']:
                     self.monitor.plot_loss(loss.item(), self.total_iterations, 'Targets Batch Loss')
 
-
-
                 if awareness_loss is not None:
                     awareness_loss.backward(retain_graph=True)
 
                 running_loss += loss.item()
                 loss.backward()
+
+                input_gradients = inputs.grad.cpu().detach()
+                ds.train_encoders(input_gradients)
 
                 # @NOTE: Decrease 900 if you want to plot gradients more often, I find it's too expensive to do so
                 if CONFIG.MONITORING['network_heatmap'] and random.randint(0,1000) > 900:

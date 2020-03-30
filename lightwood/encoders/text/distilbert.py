@@ -28,6 +28,7 @@ class DistilBertEncoder:
         self._head = None
         # Possible: speed, balance, accuracy
         self.aim = aim
+        self.trainable = True
 
         if self.aim == ENCODER_AIM.SPEED:
             # uses more memory, takes very long to train and outputs weird debugging statements to the command line,
@@ -147,19 +148,20 @@ class DistilBertEncoder:
             test_data_loader = DataLoader(
                 merged_data[int(len(merged_data) * 9 / 10):], batch_size=batch_size, shuffle=True)
 
-            best_model, error, training_time = gym.fit(train_data_loader=train_data_loader,
-                                                       test_data_loader=test_data_loader,
-                                                       desired_error=self.desired_error,
-                                                       max_time=self.max_training_time,
-                                                       callback=self._train_callback,
-                                                       eval_every_x_epochs=1,
-                                                       max_unimproving_models=10,
-                                                       custom_train_func=partial(
-                                                           self.categorical_train_function,
-                                                           test=False),
-                                                       custom_test_func=partial(
-                                                           self.categorical_train_function, test=True)
-                                                       )
+            best_model, error, training_time = gym.fit(
+                train_data_loader=train_data_loader,
+               test_data_loader=test_data_loader,
+               desired_error=self.desired_error,
+               max_time=self.max_training_time,
+               callback=self._train_callback,
+               eval_every_x_epochs=1,
+               max_unimproving_models=10,
+               custom_train_func=partial(
+                   self.categorical_train_function,
+                   test=False),
+               custom_test_func=partial(
+                   self.categorical_train_function, test=True)
+               )
 
             self._model = best_model.to(self.device)
 
@@ -214,21 +216,21 @@ class DistilBertEncoder:
             self._model.eval()
 
             best_model, error, training_time = gym.fit(train_data_loader=train_data_loader,
-                                                       test_data_loader=test_data_loader,
-                                                       desired_error=self.desired_error,
-                                                       max_time=self.max_training_time,
-                                                       callback=self._train_callback,
-                                                       eval_every_x_epochs=1,
-                                                       max_unimproving_models=10,
-                                                       custom_train_func=partial(
-                                                           self.numerical_train_function,
-                                                           backbone=self._model,
-                                                           test=False),
-                                                       custom_test_func=partial(
-                                                           self.numerical_train_function,
-                                                           backbone=self._model,
-                                                           test=True)
-                                                       )
+               test_data_loader=test_data_loader,
+               desired_error=self.desired_error,
+               max_time=self.max_training_time,
+               callback=self._train_callback,
+               eval_every_x_epochs=1,
+               max_unimproving_models=10,
+               custom_train_func=partial(
+               self.numerical_train_function,
+               backbone=self._model,
+               test=False),
+               custom_test_func=partial(
+               self.numerical_train_function,
+               backbone=self._model,
+               test=True)
+            )
 
             self._head = best_model.to(self.device)
 
@@ -236,11 +238,38 @@ class DistilBertEncoder:
             self._model_type = 'embeddings_generator'
             self._model = self._embeddings_model_class.from_pretrained(self._pretrained_model_name).to(self.device)
 
+            lb = [x for x in self._model._modules['transformer']._modules['layer']][-1]
+            lbb = lb._modules['ffn']
+            self.last_layer = lbb._modules['lin2']
+
         self._prepared = True
 
+    def backprop(self, cost):
+        print('Doing bprop')
+        self._model.backward(cost)
+        print('Done bprop')
+        return
+        with torch.enable_grad():
+            self.last_layer.grad = cost
+            print('Assigned cost')
+            self.last_layer.backwards()
+            print('Called backwards !')
+            pass
+
     def encode(self, column_data):
+        print(len(column_data))
         encoded_representation = []
-        self._model.eval()
+        self._model.train()
+        # self._max_len
+        input = [self._tokenizer.encode(x[:2], add_special_tokens=True) for x in column_data]
+        tokenized_max_len = max([len(x) for x in input])
+        input = torch.tensor([x + [self._pad_id] * (tokenized_max_len - len(x)) for x in input]).to(self.device)
+
+        output = self._model(input)
+        embeddings = output[0][:, 0, :].cpu()
+        print('Returning embeddings !')
+        return embeddings
+
         with torch.no_grad():
             for text in column_data:
                 if text is None:
