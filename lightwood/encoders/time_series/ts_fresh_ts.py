@@ -93,6 +93,6 @@ if __name__ == "__main__":
     ret = enc.encode(data)
 
     print(ret)
-    print(f'Got above vecotr of lenght: {len(ret)} and feature lenght: {len(ret[0])} for that of length {len(data)} and member length {len(data[0])}')
+    print(f'Got above vector of length: {len(ret)} and feature length: {len(ret[0])} for that of length {len(data)} and member length {len(data[0])}')
     assert(len(ret) == len(data))
     assert(len(ret) < 60)
