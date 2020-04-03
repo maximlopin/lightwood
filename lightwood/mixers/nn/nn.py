@@ -4,6 +4,7 @@ import random
 
 import torch
 from torch.utils.data import DataLoader
+import torch.nn.utils.prune as prune
 import numpy as np
 import gc
 import operator
@@ -40,6 +41,8 @@ class NnMixer:
         self.stop_selfaware_training = False
         self.is_selfaware = False
         self.last_unaware_net = False
+        self.prune = False
+        self.pruning_runs = 0
 
         self.max_confidence_per_output = []
 
@@ -116,6 +119,9 @@ class NnMixer:
         return ret
 
     def predict(self, when_data_source, include_encoded_predictions=False):
+        for index, layer in enumerate(self.net.net):
+            pass
+            #print(layer)
         """
         :param when_data_source:
         :return:
@@ -380,6 +386,16 @@ class NnMixer:
                         torch.cuda.empty_cache()
                     self.optimizer.zero_grad()
                     self.optimizer = self.optimizer_class(self.net.parameters(), **self.optimizer_args)
+
+                if epoch > 0 and epoch % 400 == 0 and epoch < 4000 and self.prune:
+                    self.pruning_runs += 1
+                    print(f'Pruning run number: {self.pruning_runs}')
+                    for index, layer in enumerate(self.net.net):
+                        if 'Linear' in str(type(layer)):
+                            prune.l1_unstructured(layer, name='weight', amount=0.01)
+                            prune.l1_unstructured(layer, name='bias', amount=0.01)
+                            prune.remove(layer, name='bias')
+                            prune.remove(layer, name='weight')
 
                 self.total_iterations += 1
                 # get the inputs; data is a list of [inputs, labels]

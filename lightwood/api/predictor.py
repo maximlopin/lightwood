@@ -278,7 +278,7 @@ class Predictor:
         first_run = True
         stop_training = False
 
-        for subset_iteration in [1, 2]:
+        for subset_iteration in [1, 2, 3]:
             if stop_training:
                 break
             subset_id_arr =  [*from_data_ds.subsets.keys()] # [1]
@@ -314,6 +314,11 @@ class Predictor:
                     # Prime the model on each subset for a bit
                     if subset_iteration == 1:
                         break
+
+                    if subset_iteration == 2:
+                        mixer.prune = True
+                    else:
+                        mixer.prune = False
 
                     # Once the training error is getting smaller, enable dropout to teach the network to predict without certain features
                     if subset_iteration > 1 and training_error < 0.4 and not from_data_ds.enable_dropout:

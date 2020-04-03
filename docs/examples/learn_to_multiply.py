@@ -16,11 +16,11 @@ m = n * 100
 op = '*'
 
 # generate random numbers between -10 and 10
-data_train = {'x': [random.randint(-15, 5) for i in range(n)],
-        'y': [random.randint(-15, 5) for i in range(n)]}
+data_train = {'x': [random.randint(-10, 5) for i in range(n)],
+        'y': [random.randint(-10, 5) for i in range(n)]}
 
-data_test = {'x': [random.randint(-15, 5) for i in range(m)],
-        'y': [random.randint(-15, 5) for i in range(m)]}
+data_test = {'x': [random.randint(-5, 10) for i in range(m)],
+        'y': [random.randint(-5, 10) for i in range(m)]}
 
 if op == '/':
     for i in range(n):
