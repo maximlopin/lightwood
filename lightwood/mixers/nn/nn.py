@@ -403,8 +403,9 @@ class NnMixer:
                 loss = None
                 for k, criterion in enumerate(self.unreduced_criterion_arr):
                     target_loss = criterion(outputs[:,ds.out_indexes[k][0]:ds.out_indexes[k][1]], labels[:,ds.out_indexes[k][0]:ds.out_indexes[k][1]])
+                    
+                    target_loss = torch.mean(target_loss * dropout_vector[:,None])
 
-                    target_loss = target_loss * dropout_vector[:,None]
                     if loss is None:
                         loss = target_loss
                     else:
@@ -417,7 +418,7 @@ class NnMixer:
                         # redyce = True
                         target_loss = criterion(outputs[:,ds.out_indexes[k][0]:ds.out_indexes[k][1]], labels[:,ds.out_indexes[k][0]:ds.out_indexes[k][1]])
 
-                        target_loss = torch.mean(target_loss * dropout_vector[:,None])
+                        target_loss = target_loss * dropout_vector[:,None]
                         target_loss = target_loss.tolist()
 
                         if type(target_loss[0]) == type([]):

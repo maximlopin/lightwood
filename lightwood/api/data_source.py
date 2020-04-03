@@ -126,10 +126,9 @@ class DataSource(Dataset):
         sample = {}
 
         dropout_features = None
-        dropout_value = []
 
         if self.training == True and random.randint(0,2) == 1 and self.enable_dropout and CONFIG.ENABLE_DROPOUT:
-            dropout_value = 0.05
+            dropout_value = 0.3
             dropout_features = [feature['name'] for feature in self.configuration['input_features'] if random.random() > (1 - self.dropout_dict[feature['name']])]
 
             # Make sure we never drop all the features, since this would make the row meaningless
