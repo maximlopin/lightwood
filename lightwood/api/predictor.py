@@ -152,6 +152,8 @@ class Predictor:
         :return: None
         """
 
+        eval_every_x_epochs = eval_every_x_epochs * 10
+        
         # This is a helper function that will help us auto-determine roughly what data types are in each column
         # NOTE: That this assumes the data is clean and will only return types for 'CATEGORICAL', 'NUMERIC' and 'TEXT'
         def type_map(col_name):
@@ -278,6 +280,9 @@ class Predictor:
         first_run = True
         stop_training = False
 
+        # @EXP Enable dropout from the get go
+        from_data_ds.enable_dropout = True
+
         for subset_iteration in [1, 2]:
             if stop_training:
                 break
@@ -375,8 +380,9 @@ class Predictor:
 
                         last_test_error = test_error
 
-                        delta_mean = np.mean(test_error_delta_buff[-5:])
-                        subset_delta_mean = np.mean(subset_test_error_delta_buff[-5:])
+                        #@EXP Train for longer
+                        delta_mean = np.mean(test_error_delta_buff[-10:])
+                        subset_delta_mean = np.mean(subset_test_error_delta_buff[-10:])
 
                         if callback_on_iter is not None:
                             callback_on_iter(epoch, training_error, test_error, delta_mean,
@@ -391,7 +397,8 @@ class Predictor:
                             stop_training = True
 
                         # If the trauining subset is overfitting on it's associated testing subset
-                        if (subset_delta_mean <= 0 and len(subset_test_error_delta_buff) > 4) or (time.time() - started_subset) > stop_training_after_seconds/len(from_data_ds.subsets.keys()):
+                        #@EXP Train for longer
+                        if (subset_delta_mean <= 0 and len(subset_test_error_delta_buff) > 9) or (time.time() - started_subset) > stop_training_after_seconds/len(from_data_ds.subsets.keys()):
                             logging.info('Finished fitting on {subset_id} of {no_subsets} subset'.format(subset_id=subset_id, no_subsets=len(from_data_ds.subsets.keys())))
 
                             if mixer.is_selfaware:
