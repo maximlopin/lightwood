@@ -67,9 +67,9 @@ class NumericEncoder:
                 vector = [0] * 4
                 try:
                     if real is None:
-                        vector[0] = 0
-                    else:
                         vector[0] = 1
+                    else:
+                        vector[0] = 0
                         vector[1] = math.log(abs(real)) if abs(real) > 0 else -20
                         vector[2] = 1 if real < 0 else 0
                         vector[3] = real/self._mean
@@ -104,11 +104,10 @@ class NumericEncoder:
                     else:
                         real_value = vector[2] * self._mean
             else:
-                if vector[0] < 0.5:
-                    ret.append(None)
-                    continue
-
-                real_value = vector[3] * self._mean
+                if vector[0] > 0.5:
+                    real_value = None
+                else:
+                    real_value = vector[3] * self._mean
 
             if self._type == 'int':
                 real_value = round(real_value)

@@ -65,7 +65,7 @@ class DataSource(Dataset):
 
         for col in self.configuration['input_features']:
             if len(self.configuration['input_features']) > 1:
-                dropout = 0.4
+                dropout = 0.2
             else:
                 dropout = 0.0
 
@@ -126,14 +126,18 @@ class DataSource(Dataset):
         sample = {}
 
         dropout_features = None
+        dropout_value = []
 
         if self.training == True and random.randint(0,2) == 1 and self.enable_dropout and CONFIG.ENABLE_DROPOUT:
+            dropout_value = 0.05
             dropout_features = [feature['name'] for feature in self.configuration['input_features'] if random.random() > (1 - self.dropout_dict[feature['name']])]
 
             # Make sure we never drop all the features, since this would make the row meaningless
-            if len(dropout_features) > len(self.configuration['input_features']):
+            if len(dropout_features) >= len(self.configuration['input_features']):
                 dropout_features = dropout_features[:-1]
             #logging.debug(f'\n-------------\nDroping out features: {dropout_features}\n-------------\n')
+        else:
+            dropout_value = 1
 
         if self.transformed_cache is None and not self.disable_cache:
             self.transformed_cache = [None] * self.__len__()
@@ -141,7 +145,7 @@ class DataSource(Dataset):
         if not self.disable_cache and not (dropout_features is not None and len(dropout_features) > 0):
             cached_sample = self.transformed_cache[idx]
             if cached_sample is not None:
-                return cached_sample
+                return cached_sample, dropout_value
 
         for feature_set in ['input_features', 'output_features']:
             sample[feature_set] = {}
@@ -202,9 +206,9 @@ class DataSource(Dataset):
 
         if not self.disable_cache:
             self.transformed_cache[idx] = sample
-            return self.transformed_cache[idx]
+            return self.transformed_cache[idx], dropout_value
         else:
-            return sample
+            return sample, dropout_value
 
     def get_column_original_data(self, column_name):
         """

@@ -71,7 +71,7 @@ class NnMixer:
         loss_confidence_arr = []
 
         for i, data in enumerate(data_loader, 0):
-            inputs, labels = data
+            inputs, labels = data[0]
             inputs = inputs.to(self.net.device)
             labels = labels.to(self.net.device)
 
@@ -134,7 +134,7 @@ class NnMixer:
         loss_confidence_arr = [[]] * len(when_data_source.out_indexes)
 
         for i, data in enumerate(data_loader, 0):
-            inputs, _ = data
+            inputs, _ = data[0]
             inputs = inputs.to(self.net.device)
 
             with torch.no_grad():
@@ -225,7 +225,7 @@ class NnMixer:
         error = 0
 
         for i, data in enumerate(data_loader, 0):
-            inputs, labels = data
+            inputs, labels = data[0]
             inputs = inputs.to(self.net.device)
             labels = labels.to(self.net.device)
 
@@ -383,10 +383,12 @@ class NnMixer:
 
                 self.total_iterations += 1
                 # get the inputs; data is a list of [inputs, labels]
-                inputs, labels = data
+                inputs, labels = data[0]
+                dropout_vector = data[1]
 
                 labels = labels.to(self.net.device)
                 inputs = inputs.to(self.net.device)
+                dropout_vector = dropout_vector.to(self.net.device)
 
                 # zero the parameter gradients
                 self.optimizer.zero_grad()
@@ -399,8 +401,10 @@ class NnMixer:
                     outputs = self.net(inputs)
 
                 loss = None
-                for k, criterion in enumerate(self.criterion_arr):
+                for k, criterion in enumerate(self.unreduced_criterion_arr):
                     target_loss = criterion(outputs[:,ds.out_indexes[k][0]:ds.out_indexes[k][1]], labels[:,ds.out_indexes[k][0]:ds.out_indexes[k][1]])
+
+                    target_loss = target_loss * dropout_vector[:,None]
                     if loss is None:
                         loss = target_loss
                     else:
@@ -413,9 +417,12 @@ class NnMixer:
                         # redyce = True
                         target_loss = criterion(outputs[:,ds.out_indexes[k][0]:ds.out_indexes[k][1]], labels[:,ds.out_indexes[k][0]:ds.out_indexes[k][1]])
 
+                        target_loss = torch.mean(target_loss * dropout_vector[:,None])
                         target_loss = target_loss.tolist()
+
                         if type(target_loss[0]) == type([]):
                             target_loss = [np.mean(x) for x in target_loss]
+
                         for i, value in enumerate(target_loss):
                             if len(unreduced_losses) <= i:
                                 unreduced_losses.append([])

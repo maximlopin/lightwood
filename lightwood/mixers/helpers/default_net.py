@@ -49,8 +49,8 @@ class DefaultNet(torch.nn.Module):
         super(DefaultNet, self).__init__()
 
         if shape is None and pretrained_net is None:
-            input_sample, output_sample = ds[0]
-
+            data, dropout = ds[0]
+            input_sample, output_sample = data
             self.input_size = len(input_sample)
             self.output_size = len(output_sample)
 
